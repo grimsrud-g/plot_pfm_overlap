@@ -81,6 +81,54 @@ def build_input_files(
     }
 
 
+def build_splithalf_dscalar_path(
+    base_directory,
+    subject,
+    session,
+    task,
+    common_suffix,
+):
+    """
+    Split-half outputs use a flatter layout than build_dscalar_path:
+    {base_directory}/{subject}/{session}/func/{filename}
+    """
+    filename = (
+        f"{subject}_{session}_task-{task}_"
+        f"{common_suffix}"
+    )
+
+    return (
+        Path(base_directory)
+        / subject
+        / session
+        / "func"
+        / filename
+    )
+
+
+def build_splithalf_input_files(
+    base_directory,
+    subject,
+    task,
+    sessions,
+    common_suffix,
+):
+    """
+    Return {half_name: dscalar_path} for one subject and task, where
+    sessions is {half_name: session}, e.g. {"half1": "ses-splithalf1"}.
+    """
+    return {
+        half_name: build_splithalf_dscalar_path(
+            base_directory=base_directory,
+            subject=subject,
+            session=session,
+            task=task,
+            common_suffix=common_suffix,
+        )
+        for half_name, session in sessions.items()
+    }
+
+
 def corresponding_dlabel_path(dscalar_path):
     dscalar_path = Path(dscalar_path)
 
@@ -766,6 +814,8 @@ def plot_surface_grid(
         ),
         subplot_kw={"projection": "3d"},
         squeeze=False,
+        # ipykernel's inline backend defaults to a transparent facecolor
+        facecolor="white",
     )
 
     for row_index, map_label in enumerate(map_labels):
@@ -822,8 +872,12 @@ def plot_surface_grid(
         fontsize=legend_fontsize,
     )
 
+    # fixed margins in inches so the title clears the column titles
+    # for any number of rows
+    figure_height = fig.get_figheight()
+
     if title is not None:
-        fig.suptitle(title, fontsize=16, y=0.98)
+        fig.suptitle(title, fontsize=16, y=1 - 0.15 / figure_height)
 
     # tight_layout handles 3D axes poorly; set margins/gaps manually.
     # Negative wspace/hspace overlap the mostly empty 3D panel boxes.
@@ -831,7 +885,7 @@ def plot_surface_grid(
         left=0.03,
         right=0.84,  # leave room for the legend
         bottom=0.0,
-        top=0.93,
+        top=1 - 0.75 / figure_height,
         wspace=-0.05,
         hspace=-0.1,
     )
